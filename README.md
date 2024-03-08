@@ -1,2 +1,6 @@
 # ProjetDataAnalys
-Project in data analysis
+Distributiob of tasks:
+- Kien: PCA and LDA
+- Elsa: Clustering
+- Jonas: Descriptive statistics
+- 
