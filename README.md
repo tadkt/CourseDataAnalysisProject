@@ -1,5 +1,6 @@
 # ProjetDataAnalys
-Distributiob of tasks:
+Distribution of tasks:
+
 - Kien: PCA and LDA
 - Elsa: Clustering
 - Jonas: Descriptive statistics
