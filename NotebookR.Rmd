@@ -1,0 +1,63 @@
+---
+title: "NotebookR"
+author: "Elsa Danh-Nghet"
+date: "2024-03-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(factoextra)
+library(FactoMineR)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r file}
+load <- read.csv("data/velibLoading.csv", sep=" ") # Reading data of the Velib loading
+head(load)
+str(load)
+
+```
+```{r}
+coord = read.csv('data/velibCoord.csv', sep = " ") # Reading coordinates for each loading
+head(coord)
+str(coord)
+```
+
+
+```{r }
+cat('Shape of "load" :', dim(load))
+number_of_missing_values_load <- sum(is.na(load))
+number_of_duplicate_values_load <- sum(duplicated(load))
+cat('\nNumber of missing values "load"', number_of_missing_values_load)
+cat('\nNumber of duplicate values "load":', number_of_duplicate_values_load)
+
+cat('\nShape of "coord" :', dim(coord))
+number_of_missing_values_coord <- sum(is.na(coord))
+number_of_duplicate_values_coord <- sum(duplicated(coord))
+cat('\nNumber of missing values "coord"', number_of_missing_values_coord)
+cat('\nNumber of duplicate values "coord":', number_of_duplicate_values_coord)
+
+```
+```{r}
+station_names <- table(coord$names)
+station_names <- sort(station_names,decreasing=TRUE)
+head(station_names)
+indexes <- which(station_names>1)
+print(station_names[indexes])
+cat("\nNumber of stations with multiple occurences in coord", length(station_names[indexes]))
+```
+
+
+```{r}
+
+```
