@@ -27,6 +27,7 @@ load <- read.csv("data/velibLoading.csv", sep=" ") # Reading data of the Velib l
 head(load)
 str(load)
 
+
 ```
 ```{r}
 coord = read.csv('data/velibCoord.csv', sep = " ") # Reading coordinates for each loading
@@ -99,5 +100,86 @@ print('--- Fullest loaded station, on average ---')
 print(paste(coord[which.max(mean),],round (max(mean),4)))
 ```
 ```{r}
+options(repr.plot.width = 15, repr.plot.height = 6)   # Comme plt.figure(15, 6)
+
+# --- #
+
+time_tick = 1 + 24*(0:6)  # vector corresponding to the beginning of days
+
+# select a station
+ind <- which(coord$names == " PORTE DES LILAS")
+i1 <- ind[1]
+# Fetches a vector of ints of size & from index 1 to n_row(loading) 
+
+df = melt(load[i1,])  #the function melt reshapes it from wide to long (like np.reshape?)
+df$time_range = 1:ncol(load)
+
+p1 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i1])
+
+i2 <- ind[2]
+# Fetches a vector of ints of size & from index 1 to n_row(loading) 
+
+df = melt(load[i2,])  #the function melt reshapes it from wide to long (like np.reshape?)
+df$time_range = 1:ncol(load)
+
+p2 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i2])
+
+i3 <- ind[3]
+# Fetches a vector of ints of size & from index 1 to n_row(loading) 
+
+df = melt(load[i3,])  #the function melt reshapes it from wide to long (like np.reshape?)
+df$time_range = 1:ncol(load)
+
+p3 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i3])
+
+p <- list(p1,p2,p3)
+do.call(grid.arrange,p)
 
 ```
+```{r}
+mean_per_hour_per_day = colMeans(load)
+mean_per_hour_per_day = matrix(mean_per_hour_per_day, nrow = 24)
+mean_per_hour         = rowMeans(mean_per_hour_per_day)
+
+# --- #
+
+mean_per_hour_per_day            = as.data.frame(mean_per_hour_per_day)
+colnames(mean_per_hour_per_day)  = list("Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday", "Sunday")
+mean_per_hour_per_day$time_range = c(1:24)
+mean_per_hour_per_day            = melt(mean_per_hour_per_day, id='time_range', variable.name='Days')
+
+mean_per_hour            = as.data.frame(mean_per_hour)
+colnames(mean_per_hour)  = list("Weekly")
+mean_per_hour$time_range = c(1:24)
+
+# --- #
+
+options(repr.plot.width = 15, repr.plot.height = 10)
+
+ggplot() + 
+    geom_line(data=mean_per_hour_per_day, aes(x=time_range, y=value, color=Days)) + 
+    geom_line(data=mean_per_hour, aes(x=time_range, y=Weekly), linewidth = 1.5)
+```
+
+```{r}
+options(repr.plot.width = 13, repr.plot.height = 10)
+hours = c(6, 12, 23)
+
+dfi = coord
+p = list()
+for (i in 1:length(hours)){
+    dfi$load = load[,hours[i]]
+    p[[i]] = ggplot(dfi, aes(x=longitude, y=latitude, color=load)) + 
+        geom_point() +
+        labs(title = paste("Stations loading - Monday",hours[i],"h"))
+}
+
+do.call(grid.arrange,c(p, ncol=2))
+```
+On peut voir que Le matin et le soir, les stations les plus remplies sont aux extérieures tandis qu'au milieu de la journée, ils sont au centre (le long de la Seine)
