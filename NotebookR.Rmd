@@ -12,7 +12,8 @@ library(reshape2)
 library(gridExtra)
 library(factoextra)
 library(FactoMineR)
-
+library(plotly)
+library(ggmap)
 ```
 
 ## R Markdown
@@ -54,10 +55,49 @@ station_names <- sort(station_names,decreasing=TRUE)
 head(station_names)
 indexes <- which(station_names>1)
 print(station_names[indexes])
-cat("\nNumber of stations with multiple occurences in coord", length(station_names[indexes]))
+cat("\nNumber of stations with multiple occurences in coord:", length(station_names[indexes]))
 ```
 
 
+```{r}
+name_checkup <- c(' PORTE DES LILAS', ' CLICHY')
+multiple_stat <- coord$names %in% name_checkup
+stat_rel <- coord[multiple_stat,]
+print(stat_rel)
+```
+
+
+```{r}
+fig <- qmplot(data=stat_rel, longitude, latitude, color = names, zoom = 16) + 
+    labs(title = paste('Placement of stations with multiple occurances:',paste(name_checkup, collapse = ',')))
+fig
+```
+
+
+```{r}
+time_ticks <- seq(0,168, by = 24)
+
+options(repr.plot.width = 15, repr.plot.height = 6)
+bp <- boxplot(load, xlab = "Time", ylab = "Loading", col = "blue", medcol ="violet")
+abline(v = time_ticks, col = "orange", lwd = 4, lty = "dotted")
+```
+```{r}
+print('--- Average loading ---')
+mean <- rowMeans(load) # Average per station
+tot_mean <- mean(mean)
+print(round(tot_mean,4))
+
+# --- #
+print(" ")
+print('--- Least loaded station, on average ---')
+print(paste(coord[which.min(mean),],round (min(mean),4)))
+# --- 
+
+print('')
+
+print('--- Fullest loaded station, on average ---')
+print(paste(coord[which.max(mean),],round (max(mean),4)))
+```
 ```{r}
 
 ```
