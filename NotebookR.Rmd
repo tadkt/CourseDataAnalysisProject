@@ -56,5 +56,6 @@ indexes <- which(station_names>1)
 print(station_names[indexes])
 cat("\nNumber of stations with multiple occurences in coord", length(station_names[indexes]))
 ```
+```{r}
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```
