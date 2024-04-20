@@ -16,25 +16,20 @@ library(plotly)
 library(ggmap)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Data
 
 ```{r file}
 load <- read.csv("data/velibLoading.csv", sep=" ") # Reading data of the Velib loading
 head(load)
-str(load)
-
 
 ```
+
 ```{r}
 coord = read.csv('data/velibCoord.csv', sep = " ") # Reading coordinates for each loading
 head(coord)
-str(coord)
 ```
 
+### Data cleaning
 
 ```{r }
 cat('Shape of "load" :', dim(load))
@@ -50,6 +45,8 @@ cat('\nNumber of missing values "coord"', number_of_missing_values_coord)
 cat('\nNumber of duplicate values "coord":', number_of_duplicate_values_coord)
 
 ```
+## Descriptive part
+
 ```{r}
 station_names <- table(coord$names)
 station_names <- sort(station_names,decreasing=TRUE)
@@ -59,7 +56,6 @@ print(station_names[indexes])
 cat("\nNumber of stations with multiple occurences in coord:", length(station_names[indexes]))
 ```
 
-
 ```{r}
 name_checkup <- c(' PORTE DES LILAS', ' CLICHY')
 multiple_stat <- coord$names %in% name_checkup
@@ -67,21 +63,83 @@ stat_rel <- coord[multiple_stat,]
 print(stat_rel)
 ```
 
-
 ```{r}
 fig <- qmplot(data=stat_rel, longitude, latitude, color = names, zoom = 16) + 
     labs(title = paste('Placement of stations with multiple occurances:',paste(name_checkup, collapse = ',')))
 fig
 ```
+Looking at two different stations with multiple occurences, we can see that they are really close geographically. We can suppose that the velib there are often used. Let's take a look at the loading of the station Porte des lilas .
 
 
 ```{r}
-time_ticks <- seq(0,168, by = 24)
+options(repr.plot.width = 15, repr.plot.height = 6)  
 
-options(repr.plot.width = 15, repr.plot.height = 6)
-bp <- boxplot(load, xlab = "Time", ylab = "Loading", col = "blue", medcol ="violet")
-abline(v = time_ticks, col = "orange", lwd = 4, lty = "dotted")
+# --- #
+
+time_tick = 1 + 24*(0:6) 
+
+ind <- which(coord$names == " PORTE DES LILAS")
+i1 <- ind[1]
+
+df = melt(load[i1,])  
+df$time_range = 1:ncol(load)
+
+p1 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i1])
+
+i2 <- ind[2]
+df = melt(load[i2,])
+df$time_range = 1:ncol(load)
+
+p2 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i2])
+
+i3 <- ind[3]
+
+df = melt(load[i3,]) 
+df$time_range = 1:ncol(load)
+
+p3 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i3])
+
+p <- list(p1,p2,p3)
+do.call(grid.arrange,p)
+
 ```
+
+Indeed, we can clearly see that the loading of those station are often near 0. It moves a lot so we can imagine that the velib are put there the morning and directly used by the inhabitants to go to work. We can explain that there is only one time in the day where the loading is high by the fact that this station is on a hill. We can suppose that the people are using the velib to go down to work and then take the public transport to go back up. Let's take a look at the loading of the station Clichy which is not on a hill.
+
+```{r}
+ind <- which(coord$names == " CLICHY")
+i1 <- ind[1]
+
+df = melt(load[i1,])  
+df$time_range = 1:ncol(load)
+
+p1 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i1])
+
+i2 <- ind[2]
+df = melt(load[i2,])
+df$time_range = 1:ncol(load)
+
+p2 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+    labs(title=coord$names[i2])
+
+
+p <- list(p1,p2)
+do.call(grid.arrange,p)
+
+```
+It is really more difficult to interpret the loading of this station. 
+
+
+
 ```{r}
 print('--- Average loading ---')
 mean <- rowMeans(load) # Average per station
@@ -98,50 +156,42 @@ print('')
 
 print('--- Fullest loaded station, on average ---')
 print(paste(coord[which.max(mean),],round (max(mean),4)))
+
+# --- 
+print("--- Average loading of station CLICHY ---")
+
+print((mean[i1]+mean[i2])/2)
+
 ```
+The average loading of the stations Clichy is clearly lower than the average loading of all the stations. The velib there are then often used. It explains the fact that there is two stations at the same place there.
+However, we can see that the station Hornet (Bagnolet) is often empty but is not part of the station with multiple occurences. It would maybe be useful to add one more.
+On the other hand, some stations are not that useful. Indeed, the station Insurrection aout 1944 (Ivry) is almost full at every hour of the day, with an average loading of almost 92%. Let's take a closer look.
+
 ```{r}
-options(repr.plot.width = 15, repr.plot.height = 6)   # Comme plt.figure(15, 6)
+ind <- which(coord$names == " INSURRECTION AOUT 1944 (IVRY)")
+i <- ind[1]
 
-# --- #
-
-time_tick = 1 + 24*(0:6)  # vector corresponding to the beginning of days
-
-# select a station
-ind <- which(coord$names == " PORTE DES LILAS")
-i1 <- ind[1]
-# Fetches a vector of ints of size & from index 1 to n_row(loading) 
-
-df = melt(load[i1,])  #the function melt reshapes it from wide to long (like np.reshape?)
+df = melt(load[i,])  
 df$time_range = 1:ncol(load)
 
-p1 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
+ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
     geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
-    labs(title=coord$names[i1])
+    labs(title=coord$names[i])
 
-i2 <- ind[2]
-# Fetches a vector of ints of size & from index 1 to n_row(loading) 
-
-df = melt(load[i2,])  #the function melt reshapes it from wide to long (like np.reshape?)
-df$time_range = 1:ncol(load)
-
-p2 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
-    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
-    labs(title=coord$names[i2])
-
-i3 <- ind[3]
-# Fetches a vector of ints of size & from index 1 to n_row(loading) 
-
-df = melt(load[i3,])  #the function melt reshapes it from wide to long (like np.reshape?)
-df$time_range = 1:ncol(load)
-
-p3 = ggplot(df, aes(x=time_range, y=value)) + geom_line(col="darkorchid") +
-    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
-    labs(title=coord$names[i3])
-
-p <- list(p1,p2,p3)
-do.call(grid.arrange,p)
-
+min(load[i,])
 ```
+We can now see that the lower loading is almost of 57% on wednesday but it is hard to explain why. Except that day, it does not go under 70%. 
+Let's take a look at the entire dataframe.
+
+```{r}
+time_ticks <- seq(0,168, by = 24)
+
+options(repr.plot.width = 15, repr.plot.height = 6)
+bp <- boxplot(load, xlab = "Time", ylab = "Loading", col = "blue", medcol ="violet")
+abline(v = time_ticks, col = "orange", lwd = 4, lty = "dotted")
+```
+We can see that the behavior of stations loading is similar every day.
+
 ```{r}
 mean_per_hour_per_day = colMeans(load)
 mean_per_hour_per_day = matrix(mean_per_hour_per_day, nrow = 24)
@@ -166,6 +216,9 @@ ggplot() +
     geom_line(data=mean_per_hour_per_day, aes(x=time_range, y=value, color=Days)) + 
     geom_line(data=mean_per_hour, aes(x=time_range, y=Weekly), linewidth = 1.5)
 ```
+For the weekdays, we can clearly see that the average loading evolves more or less in the same way. The stations are fuller in the morning, then people probably goes to work by bike between 8am and 10am. A lot of people are using velib at 8pm. 
+In the weekend, the average loading is the lowest around 6pm. 
+
 
 ```{r}
 options(repr.plot.width = 13, repr.plot.height = 10)
@@ -182,4 +235,298 @@ for (i in 1:length(hours)){
 
 do.call(grid.arrange,c(p, ncol=2))
 ```
+
 On peut voir que Le matin et le soir, les stations les plus remplies sont aux extérieures tandis qu'au milieu de la journée, ils sont au centre (le long de la Seine)
+
+PCA
+
+```{r}
+options(repr.plot.width = 10, repr.plot.height = 8)
+pca = PCA(load, scale.unit = TRUE,ncp =20, graph=FALSE)
+
+# Visualisation of explained variance and variables
+grid.arrange(fviz_eig(pca),fviz_pca_var(pca,axes=c(1,2)),ncol=2)
+
+head(pca$eig)
+
+
+
+
+```
+
+```{r}
+options(repr.plot.width = 10, repr.plot.height = 6)
+
+grid.arrange(
+    fviz_pca_ind(pca, axes=c(1,2), geom=c("point")),
+    fviz_pca_ind(pca, axes=c(1,3), geom=c("point")),
+    fviz_pca_ind(pca, axes=c(2,3), geom=c("point")),
+    ncol=3
+)
+```
+
+```{r}
+reskmeans = kmeans(load, centers=2) 
+
+fviz_cluster(reskmeans, data=load, ellipse.type="norm", labelsize=8, geom=c("point"))
+```
+
+```{r}
+tbl = table(coord$bonus, reskmeans$cluster)
+
+options(repr.plot.width = 9, repr.plot.height = 6)
+mosaicplot(tbl, color=c(2:4))
+
+
+```
+
+```{r}
+#coord$index <- seq_len(nrow(coord))
+#load$index <- seq_len(nrow(load))
+#velib <- merge(coord, load, by = "index", all = TRUE)
+#head(velib)
+
+```
+
+```{r}
+Hill <- load[coord$bonus == 1, ]
+NoHill <- load[coord$bonus == 0, ]
+options(repr.plot.width = 15, repr.plot.height = 6)
+
+
+day <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+HourHill <- matrix(colMeans(Hill), nrow = 24) # average loading of a station on the hill per hour for one day
+HourNoHill <- matrix(colMeans(NoHill), nrow = 24) # average loading of a station not on the hill per hour for one day
+options(repr.plot.width = 15, repr.plot.height = 6)
+par(mfrow = c(1, 2))
+matplot(HourHill, type = "l", xlim = c(0,26), ylim = c(0, 0.45), col = 1:7, pch = 19, 
+        xlab = "Hour, stations on a hill", ylab = "Loading")
+legend(x = 10, y = 0.47, day,lty = 1:7, col = 1:7)
+matplot(HourNoHill, type = "l", ylim = c(0, 0.45), col = 1:7, pch = 19, 
+        xlab = "Hour, stations not on a hill", ylab = "Loading")
+legend(x = 9, y = 0.3, day, lty = 1:7, col = 1:7)
+
+```
+
+```{r}
+options(repr.plot.width = 10, repr.plot.height = 6)
+
+
+fviz_nbclust(load, FUNcluster=kmeans, method="wss") +
+    ggtitle("Within sum of square (WSS) according to the number of clusters")
+
+fviz_nbclust(load, FUNcluster=kmeans, method="silhouette") +
+    ggtitle("Silhouette score according to the number of clusters")
+```
+
+```{r}
+library(factoextra)
+library(cluster)
+options(repr.plot.width = 15, repr.plot.height = 12)
+
+# With 2 clusters
+reskmeans = kmeans(load, centers=2) 
+sil = silhouette(reskmeans$cluster, dist(load))
+p1 = fviz_silhouette(sil)
+
+# With 3 clusters
+reskmeans = kmeans(load, centers=3) 
+sil = silhouette(reskmeans$cluster, dist(load))
+p2 = fviz_silhouette(sil)
+
+# With 4 clusters
+reskmeans = kmeans(load, centers=4) 
+sil = silhouette(reskmeans$cluster, dist(load))
+p3 = fviz_silhouette(sil)
+
+# With 5 clusters
+reskmeans = kmeans(load, centers=5) 
+sil = silhouette(reskmeans$cluster, dist(load))
+p4 = fviz_silhouette(sil)
+
+grid.arrange(p1,p2,p3, p4,ncol=2)
+```
+
+```{r}
+reskmeans$cluster[3]
+```
+
+```{r}
+p <- ggplot(load, aes(x = coord$longitude, y = coord$latitude)) +
+  geom_point(aes(color = factor(reskmeans$cluster))) +  # Utilisation de 'Cluster' pour la couleur
+  labs(title = "Clusters des stations de métro", x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+# Affichage du nuage de points avec des couleurs différentes pour chaque cluster
+print(p)
+
+```
+
+```{r}
+options(repr.plot.width = 12, repr.plot.height = 6)
+
+grid.arrange(
+    fviz_nbclust(load, FUNcluster=hcut, method="wss") + ggtitle("WSS according to nb of clusters"),
+    fviz_nbclust(load, FUNcluster=hcut, method="silhouette") + ggtitle("silhouette according to nb of clusters"),
+    ncol=2
+)
+```
+
+```{r}
+reshclust = cutree(hclustcomplete, 2)
+
+# --- #
+
+fviz_dend(hclustcomplete, k=2, show_labels=FALSE, rect=TRUE)
+```
+
+```{r}
+tbl = table(coord$bonus, reshclust)
+print(tbl)
+
+options(repr.plot.width = 9, repr.plot.height = 6)
+mosaicplot(tbl, color=c(2:4))
+
+```
+
+```{r}
+p1 <- ggplot(load, aes(x = coord$longitude, y = coord$latitude)) +
+  geom_point(aes(color = factor(reshclust))) +  # Utilisation de 'Cluster' pour la couleur
+  labs(title = "Clusters des stations de métro", x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+# Affichage du nuage de points avec des couleurs différentes pour chaque cluster
+print(p1)
+
+```
+
+```{r}
+#trop long à charger
+library(mclust)
+resBICall = mclustBIC(load, G=2:20)
+summary(resBICall)
+
+# --- #
+
+resBICall = Mclust(load, G=2:20)
+summary(resBICall)
+
+fviz_mclust(resBICall, what="BIC")
+```
+
+```{r}
+
+pca_data <- pca$ind$coord
+options(repr.plot.width = 10, repr.plot.height = 6)
+
+
+fviz_nbclust(pca_data, FUNcluster=kmeans, method="wss") +
+    ggtitle("Within sum of square (WSS) according to the number of clusters")
+
+fviz_nbclust(pca_data, FUNcluster=kmeans, method="silhouette") +
+    ggtitle("Silhouette score according to the number of clusters")
+```
+
+```{r}
+
+options(repr.plot.width = 15, repr.plot.height = 12)
+
+# With 2 clusters
+reskmeans = kmeans(pca_data, centers=2) 
+sil = silhouette(reskmeans$cluster, dist(pca_data))
+p1 = fviz_silhouette(sil)
+
+# With 3 clusters
+reskmeans = kmeans(pca_data, centers=3) 
+sil = silhouette(reskmeans$cluster, dist(pca_data))
+p2 = fviz_silhouette(sil)
+
+# With 4 clusters
+reskmeans = kmeans(pca_data, centers=4) 
+sil = silhouette(reskmeans$cluster, dist(pca_data))
+p3 = fviz_silhouette(sil)
+
+# With 5 clusters
+reskmeans = kmeans(pca_data, centers=5) 
+sil = silhouette(reskmeans$cluster, dist(pca_data))
+p4 = fviz_silhouette(sil)
+
+grid.arrange(p1,p2,p3, p4,ncol=2)
+```
+
+```{r}
+reskmeans2 = kmeans(pca_data, centers=2) 
+
+fviz_cluster(reskmeans2, data=pca_data, ellipse.type="norm", labelsize=8, geom=c("point"))
+```
+
+```{r}
+tbl = table(coord$bonus, reskmeans2$cluster)
+print(tbl)
+
+options(repr.plot.width = 9, repr.plot.height = 6)
+mosaicplot(tbl, color=c(2:4))
+
+```
+
+```{r}
+p <- ggplot(pca_data, aes(x = coord$longitude, y = coord$latitude)) +
+  geom_point(aes(color = factor(reskmeans2$cluster))) +  # Utilisation de 'Cluster' pour la couleur
+  labs(title = "Clusters des stations de métro", x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+# Affichage du nuage de points avec des couleurs différentes pour chaque cluster
+print(p)
+
+```
+
+```{r}
+options(repr.plot.width = 12, repr.plot.height = 6)
+
+grid.arrange(
+    fviz_nbclust(pca_data, FUNcluster=hcut, method="wss") + ggtitle("WSS according to nb of clusters"),
+    fviz_nbclust(pca_data, FUNcluster=hcut, method="silhouette") + ggtitle("silhouette according to nb of clusters"),
+    ncol=2
+)
+```
+
+```{r}
+reshclust = cutree(hclustcomplete, 3)
+
+# --- #
+
+fviz_dend(hclustcomplete, k=3, show_labels=FALSE, rect=TRUE)
+```
+
+```{r}
+tbl = table(coord$bonus, reshclust)
+print(tbl)
+
+options(repr.plot.width = 9, repr.plot.height = 6)
+mosaicplot(tbl, color=c(2:4))
+
+```
+
+```{r}
+p1 <- ggplot(pca_data, aes(x = coord$longitude, y = coord$latitude)) +
+  geom_point(aes(color = factor(reshclust))) +  # Utilisation de 'Cluster' pour la couleur
+  labs(title = "Clusters des stations de métro", x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+# Affichage du nuage de points avec des couleurs différentes pour chaque cluster
+print(p1)
+
+```
+
+```{r}
+library(mclust)
+resBICall = mclustBIC(pca_data, G=2:7)
+summary(resBICall)
+
+# --- #
+
+resBICall = Mclust(pca_data, G=2:7)
+summary(resBICall)
+
+fviz_mclust(resBICall, what="BIC")
+```
