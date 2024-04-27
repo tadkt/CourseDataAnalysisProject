@@ -224,6 +224,7 @@ options(repr.plot.width = 13, repr.plot.height = 10)
 hours = c(6, 12, 15, 23)
 
 dfi = coord
+
 p = list()
 for (i in 1:length(hours)){
     dfi$load = load[,hours[i]]
@@ -282,7 +283,7 @@ When we compare the stations that are located on a hill and those that are not o
 ## PCA
 
 ```{r, include = TRUE}
-options(repr.plot.width = 10, repr.plot.height = 8)
+options(repr.plot.width = 20, repr.plot.height = 8)
 pca = PCA(load, scale.unit = TRUE,ncp =20, graph=FALSE)
 
 # Visualisation of explained variance and variables
@@ -291,14 +292,12 @@ grid.arrange(fviz_eig(pca),fviz_pca_var(pca,axes=c(1,2)),ncol=2)
 head(pca$eig)
 
 
-
-
 ```
 
-We chose to keep five components so it explains enough the variances (76.2%) but not more to limit the number of components since it does not make us win a lot of explained variances.
+We chose to keep three components so it explains enough the variances (68.6%) but not more to limit the number of components since it does not make us win a lot of explained variances.
 
 ```{r}
-pca<-PCA(load, scale.unit = T, ncp = 5, graph = F)
+pca<-PCA(load, scale.unit = T, ncp = 3, graph = F)
 ```
 
 ```{r}
@@ -323,18 +322,34 @@ p3 = ggplot(df[df$variable == paste0("V", 3), ], aes(x=time_range, y= value)) + 
     geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
     labs(x = "Time", y = paste("Comp", 3, "Value"))
 
-p4 = ggplot(df[df$variable == paste0("V", 4), ], aes(x=time_range, y= value)) + geom_line() +
-    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
-    labs(x = "Time", y = paste("Comp", 4, "Value"))
+#p4 = ggplot(df[df$variable == paste0("V", 4), ], aes(x=time_range, y= value)) + geom_line() +
+#    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+#    labs(x = "Time", y = paste("Comp", 4, "Value"))
 
-p5 = ggplot(df[df$variable == paste0("V", 5), ], aes(x=time_range, y= value)) + geom_line() +
-    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
-    labs(x = "Time", y = paste("Comp", 5, "Value"))
+#p5 = ggplot(df[df$variable == paste0("V", 5), ], aes(x=time_range, y= value)) + geom_line() +
+#    geom_vline(xintercept=time_tick, col="orange", linetype="dashed") +
+#    labs(x = "Time", y = paste("Comp", 5, "Value"))
 
 
 
-p <- list(p1,p2,p3,p4,p5)
+p <- list(p1,p2,p3)
 do.call(grid.arrange,p)
+
+```
+```{r}
+l = list()
+for (i in (1:24)){
+  l[[i]]=rowMeans(subset(load, select = seq(i, 168, by = 24)))}
+load_mean_week <- data.frame(l)
+```
+
+```{r}
+dim(load_mean_week)
+pca2 = PCA(load_mean_week, scale.unit = TRUE,ncp =3, graph=FALSE)
+head(pca2$eig)
+
+library(corrplot)
+corrplot(pca$var$cor,load_mean_week, is.corr=FALSE, method='ellipse')
 ```
 
 
@@ -552,10 +567,10 @@ p4 = fviz_silhouette(sil)
 
 grid.arrange(p1,p2,p3, p4,ncol=2)
 ```
-Here, we can choose k = 3.
+Here, we can choose k = 2.
 
 ```{r, include = TRUE}
-reskmeans2 = kmeans(pca_data, centers=3) 
+reskmeans2 = kmeans(pca_data, centers=2) 
 
 fviz_cluster(reskmeans2, data=pca_data, ellipse.type="norm", labelsize=8, geom=c("point"))
 ```
@@ -584,8 +599,8 @@ p2 = ggplot(dfi, aes(x=longitude, y=latitude, color=load)) +
 p = list(p1,p2)
 do.call(grid.arrange,p)
 ```
-Those clusters are more close to the loading of the stations at 12h. The first and third clusters are difficult to interpret.
 
+Those clusters are more close to the loading of the stations at 12h. The first and third clusters are difficult to interpret.
 
 ### CAH
 ```{r, include = TRUE}
@@ -620,7 +635,7 @@ mosaicplot(tbl, color=c(2:4))
 ```{r, include = TRUE}
 p1 <- ggplot(pca_data, aes(x = coord$longitude, y = coord$latitude)) +
   geom_point(aes(color = factor(reshclust))) +  # Utilisation de 'Cluster' pour la couleur
-  labs(title = "Clusters des stations de métro", x = "Longitude", y = "Latitude") +
+  labs(title = "Clusters des stations", x = "Longitude", y = "Latitude") +
   theme_minimal()
 
 # Affichage du nuage de points avec des couleurs différentes pour chaque cluster
@@ -645,3 +660,38 @@ summary(resBICall)
 
 fviz_mclust(resBICall, what="BIC")
 ```
+```{r}
+
+gmm_mod <- Mclust(data = pca_data, G=7, nstart=10)
+
+
+
+options(repr.plot.width = 10, repr.plot.height = 10)
+p2 <- ggplot(pca_data, aes(x = coord$longitude, y = coord$latitude)) +
+  geom_point(aes(color = factor(gmm_mod$classification))) +  # Utilisation de 'Cluster' pour la couleur
+  labs(title = "Clusters des stations", x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+# Affichage du nuage de points avec des couleurs différentes pour chaque cluster
+print(p2)
+
+```
+```{r}
+options(repr.plot.width = 7, repr.plot.height = 7)
+print(fviz_cluster(object=gmm_mod,data=compo_acp,show.clust.cent=TRUE,ellipse=TRUE))
+```
+
+
+```{r}
+nc_gmm = 7
+time_range = 1:ncol(load)
+
+options(repr.plot.width = 28, repr.plot.height =12)
+
+
+for (i in 1:nc_gmm){
+    loadgmm <- load[gmm_mod$classification==i,]
+    plot(time_range,colMeans(loadgmm), type = "l")}
+```
+
+
